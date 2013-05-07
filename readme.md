@@ -1,0 +1,1 @@
+A very simple WordPress-plugin to add Hashtag support to your blog posts.
