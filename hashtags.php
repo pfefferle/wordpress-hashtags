@@ -1,59 +1,33 @@
 <?php
 /*
- Plugin Name: Hashtags
- Plugin URI: http://github.com/pfefferle/wordpress-hashtags
- Description: Adds twitter like hashtags to your blog-posts
- Author: Matthias Pfefferle
- Author URI: http://notizblog.org/
- Version: 1.0.0
+ Plugin Name: Hashtags Extractor
+ Plugin URI: http://github.com/artlung/wordpress-hashtags
+ Description: Adds hashtags to the post editor as tags when found in title and post content
+ Author: Joe Crawford
+ Author URI: http://artlung.com/
+ Version: 0.0.1
 */
 
 define( "HASHTAGS_REGEXP" ,  "(^|\s|>)#([^\s<>]+)\b" );
 
-/**
- * filter to save #tags as real wordpress tags
- * 
- * @param int $id the rev-id
- * @param array $data the post-data as array
- */
-function hashtags_insert_post( $id, $data ) {
-  if (preg_match_all("/".HASHTAGS_REGEXP."/i", $data->post_content, $match)) {
-    $tags = implode(", ", $match[2]);
+// Called on admin edit.
+add_filter( 'terms_to_edit', function ( $terms_to_edit, $taxonomy ) {
+    global $post;
+    if ( ! isset( $post->ID ) || $taxonomy != 'post_tag' || ! $terms_to_edit ) {
+        return $terms_to_edit;
+    }
+    $tags_to_edit = explode(',', $terms_to_edit);
 
-    wp_add_post_tags( $data->post_parent, $tags );
-  }
-  
-  return $id;
-}
-add_filter( 'wp_insert_post', 'hashtags_insert_post', 99, 2 );
+    if (preg_match_all("/".HASHTAGS_REGEXP."/i", $post->post_content, $match)) {
+        $tags = implode(", ", $match[2]);
+        $tags_to_edit = array_merge($tags_to_edit, explode(", ", $tags));
+    }
+    if (preg_match_all("/".HASHTAGS_REGEXP."/i", $post->post_title, $match)) {
+        $tags = implode(", ", $match[2]);
+        $tags_to_edit = array_merge($tags_to_edit, explode(", ", $tags));
+    }
+    array_map('strtolower', $tags_to_edit);
+    $tags_to_edit = array_unique($tags_to_edit);
+    return implode(',', $tags_to_edit);
+}, 10, 2 );
 
-/**
- * filter to replace the #tags in the content with links
- * 
- * @param string $the_content the post-content
- */
-function hashtags_the_content( $the_content ) {
-  $the_content = preg_replace_callback("/".HASHTAGS_REGEXP."/i", "_hashtags_replace_with_links", $the_content);
-
-  return $the_content;
-}
-add_filter( 'the_content', 'hashtags_the_content', 99, 2 );
-
-/**
- * a callback for preg_replace to build the term links
- *
- * @param array $result the preg_match results
- * @return string the final string
- */
-function _hashtags_replace_with_links( $result ) {
-  $tag = $result[2];
-  $space = $result[1];
-  $tag_object = get_term_by("name", $result[2], "post_tag");
-  
-  if ($tag_object) {
-    $link = get_term_link($tag_object, "post_tag");
-    return "$space<a href='$link' rel='tag'>#$tag</a>";
-  }  
-  
-  return $space."#".$tag;
-}

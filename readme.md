@@ -1,1 +1,3 @@
-A very simple WordPress-plugin to add Hashtag support to your blog posts.
+A small plugin to alter the WordPress edit screen such that `#hashtag` formatted text in the post title or body is added to the Tags editor.
+
+Based on Matthias Pfefferle's [WordPress HashTags](http://github.com/pfefferle/wordpress-hashtags).
